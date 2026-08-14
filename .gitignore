@@ -1,0 +1,8 @@
+.venv
+.DS_Store
+# Ignore data and cache files
+__pycache__/
+*.db
+*.sqlite3
+*.joblib
+
