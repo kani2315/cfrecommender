@@ -18,12 +18,14 @@ _pipeline = None
 _last_mtime = 0.0
 
 def split_tags(tag_str: str) -> list[str]:
+    # helper to parse tags string into a list
     """Custom tokenizer for Codeforces tags. Must be in a module to be pickled correctly."""
     if not tag_str:
         return []
     return [t.strip() for t in tag_str.split(",")]
 
 def _load():
+    # loads the machine learning model from disk into memory
     """Load model pipeline, reloading if the file on disk has been updated."""
     global _pipeline, _last_mtime
     
@@ -41,6 +43,7 @@ def _load():
 
 
 def predict_batch(records: list[dict]) -> list[float]:
+    # predicts the win-rate probability for a batch of problems
     """
     Predict P(solve) for a batch of candidate problems for a user.
 

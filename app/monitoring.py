@@ -48,6 +48,7 @@ MODEL_PREDICTION_TIME = Histogram(
 # ── middleware helper ─────────────────────────────────────────
 
 async def prometheus_middleware(request: Request, call_next):
+    # middleware to track prometheus metrics for every api call
     """Starlette middleware that records request count + latency."""
     start = time.perf_counter()
     response = await call_next(request)
@@ -76,6 +77,7 @@ async def prometheus_middleware(request: Request, call_next):
 # ── /metrics endpoint ────────────────────────────────────────
 
 async def metrics_endpoint(request: Request) -> Response:
+    # exposes the metrics so prometheus can scrape them
     """Prometheus scrape endpoint."""
     return Response(
         content=generate_latest(),

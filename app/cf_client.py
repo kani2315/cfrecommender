@@ -8,6 +8,7 @@ CF_API_BASE = "https://codeforces.com/api"
 
 
 def get_user_info(handle: str) -> dict:
+    # fetches basic profile data from codeforces
     url = f"{CF_API_BASE}/user.info?handles={handle}"
     try:
         res = requests.get(url, timeout=10)
@@ -27,6 +28,7 @@ def get_user_info(handle: str) -> dict:
 
 
 def get_user_submissions(handle: str) -> List[Dict]:
+    # grabs all submissions for the given user
     url = f"{CF_API_BASE}/user.status?handle={handle}"
     try:
         res = requests.get(url, timeout=15)
@@ -60,6 +62,7 @@ def get_user_submissions(handle: str) -> List[Dict]:
 
 
 def get_solved_problem_ids(handle: str) -> Set[str]:
+    # extracts just the problem ids that were successfully solved
     """Return a set of problem IDs that the user has already solved."""
     subs = get_user_submissions(handle)
     solved = {s["problem_id"] for s in subs if s["solved"]}

@@ -14,6 +14,7 @@ SWEET_SPOT_HIGH    = 0.70
 
 
 def _get_weak_tags(subs: list[dict]) -> list[str]:
+    # calculates which topics the user struggles with the most
     """Analyze live submissions and return tags where the user is weak."""
     tag_stats = {}
     
@@ -40,6 +41,7 @@ def _get_weak_tags(subs: list[dict]) -> list[str]:
 
 
 def recommend(db: Session, handle: str, n: int = DEFAULT_N) -> list[dict]:
+    # main logic to find and rank the best practice problems
     # get user data
     user_info = get_user_info(handle)
     if not user_info:

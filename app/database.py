@@ -94,11 +94,13 @@ class Submission(Base):
 
 def create_tables():
     """Create all tables (safe to call multiple times)."""
+    # creates the postgres tables if they don't exist
     Base.metadata.create_all(bind=engine)
 
 
 def get_db():
     """FastAPI dependency — yields a DB session, then closes it."""
+    # opens a db session and closes it when done
     db = SessionLocal()
     try:
         yield db

@@ -45,12 +45,14 @@ app.add_api_route("/metrics", metrics_endpoint, methods=["GET"], tags=["Monitori
 
 @app.on_event("startup")
 def on_startup():
+    # runs when the server boots up
     """Create tables on first run (idempotent)."""
     create_tables()
 
 
 @app.middleware("http")
 async def add_timing_header(request: Request, call_next):
+    # tracks how long each api request takes
     """Attach X-Process-Time header to every response (monitoring)."""
     start = time.perf_counter()
     response = await call_next(request)
@@ -69,6 +71,7 @@ def get_recommendations(
     n: int = Query(default=10, ge=1, le=50, description="Number of recommendations"),
     db: Session = Depends(get_db),
 ):
+    # api endpoint that returns problem recommendations for a user
     """
     Return the top-N recommended problems for a Codeforces user in real-time.
 
@@ -87,6 +90,7 @@ def get_recommendations(
 
 @app.get("/users", tags=["Users"], response_model=list[UserOut])
 def list_users(db: Session = Depends(get_db)):
+    # diagnostic endpoint to list users in the local db
     """Return all locally cached users from the database."""
     return db.query(User).order_by(User.handle).all()
 
