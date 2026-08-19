@@ -9,7 +9,7 @@ GET  /users                     → list all locally cached users
 GET  /metrics                   → Prometheus metrics
 """
 
-import sys, pathlib, time, os
+import sys, pathlib, time, os, asyncio, subprocess
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
@@ -43,11 +43,24 @@ app.middleware("http")(prometheus_middleware)
 app.add_api_route("/metrics", metrics_endpoint, methods=["GET"], tags=["Monitoring"])
 
 
+async def background_scheduler():
+    # loops forever in the background to keep the ML model fresh
+    while True:
+        try:
+            print("🚀 Starting background ML training task...")
+            subprocess.run(["python", "scripts/fetch_cf_data.py"], check=True)
+            subprocess.run(["python", "scripts/train.py"], check=True)
+            print("✅ Background training complete. Sleeping for 24 hours.")
+        except Exception as e:
+            print(f"❌ Error in background scheduler: {e}")
+        await asyncio.sleep(86400)  # wait 24 hours before retraining
+
 @app.on_event("startup")
-def on_startup():
+async def on_startup():
     # runs when the server boots up
     """Create tables on first run (idempotent)."""
     create_tables()
+    asyncio.create_task(background_scheduler())
 
 
 @app.middleware("http")
