@@ -223,9 +223,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let avoidedHtml = (data.avoided_topics || []).map(t => `
             <div class="topic-row">
-                <span class="topic-name" style="color: var(--text-muted)">${t}</span>
+                <span class="topic-name" style="color: var(--text-muted)">${t.tag}</span>
                 <div class="topic-stats">
-                    <span class="win-rate" style="color: var(--text-muted)">0 attempts</span>
+                    <span class="win-rate" style="color: var(--text-muted)">${t.attempts} attempts</span>
                 </div>
             </div>
         `).join('') || '<p style="color: var(--text-muted)">None</p>';
