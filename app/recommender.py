@@ -115,7 +115,7 @@ def recommend(db: Session, handle: str, n: int = DEFAULT_N) -> list[dict]:
             if s["solved"]:
                 tag_stats[tag]["solved"] += 1
                 
-    avoided_tags = _get_avoided_tags(db, user_rating, tag_stats)
+    avoided_tags = [t["tag"] for t in _get_avoided_tags(db, user_rating, tag_stats)]
 
     def score_candidates(cands, target_prob):
         if not cands: return []
