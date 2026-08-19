@@ -26,11 +26,13 @@ def fetch_problems(db):
         return
 
     problems_data = data["result"]["problems"]
+    stats_data = data["result"]["problemStatistics"]
     
-    # Optional: We could also fetch problem statistics to get solve counts,
-    # but we just need rating and tags for now.
-    
-    # We now delete everything in main() beforehand
+    # Map problem stats (solvedCount)
+    stats_map = {}
+    for stat in stats_data:
+        pid = f"{stat['contestId']}{stat['index']}"
+        stats_map[pid] = stat.get("solvedCount", 0)
     
     count = 0
     for p in problems_data:
@@ -40,12 +42,14 @@ def fetch_problems(db):
             
         pid = f"{p['contestId']}{p['index']}"
         tags = ",".join(p.get("tags", []))
+        solve_count = stats_map.get(pid, 0)
         
         problem_obj = Problem(
             id=pid,
             name=p["name"],
             rating=p["rating"],
-            tags=tags
+            tags=tags,
+            solve_count=solve_count
         )
         db.add(problem_obj)
         count += 1

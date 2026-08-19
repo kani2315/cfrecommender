@@ -7,10 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsHeader = document.getElementById('resultsHeader');
     const targetHandleSpan = document.getElementById('targetHandle');
     const cardsContainer = document.getElementById('cardsContainer');
+    const analysisContainer = document.getElementById('analysisContainer');
     const themeToggle = document.getElementById('themeToggle');
 
     let currentProblems = [];
     let currentHandle = '';
+    let currentAnalysis = null;
 
     // Theme Management
     const currentTheme = localStorage.getItem('theme') || 'light';
@@ -84,6 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Reset filters to All
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             document.querySelector('.filter-btn[data-filter="All"]').classList.add('active');
+            
+            analysisContainer.classList.add('hidden');
+            cardsContainer.classList.remove('hidden');
 
             renderCards(currentProblems, currentHandle);
 
@@ -118,9 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 .join('');
                 
             let diffColor = 'var(--text-muted)';
-            if (prob.difficulty_category === 'Easy') diffColor = '#10b981';
-            else if (prob.difficulty_category === 'Medium') diffColor = '#f59e0b';
-            else if (prob.difficulty_category === 'Hard') diffColor = '#ef4444';
+            if (prob.difficulty_category === "Let's Improve These") diffColor = '#f59e0b';
+            else if (prob.difficulty_category === 'Step Out of Your Comfort Zone') diffColor = '#8b5cf6';
 
             // Format probability as percentage
             const percent = (prob.predicted_solve_probability * 100).toFixed(1) + '%';
@@ -159,19 +163,117 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
             if (currentProblems.length === 0) return;
             
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             
             const filter = e.target.dataset.filter;
-            if (filter === 'All') {
-                renderCards(currentProblems, currentHandle);
+            
+            if (filter === 'Analysis') {
+                cardsContainer.classList.add('hidden');
+                analysisContainer.classList.remove('hidden');
+                
+                if (!currentAnalysis || currentAnalysis.handle !== currentHandle) {
+                    analysisContainer.innerHTML = '<div class="spinner" style="margin: 4rem auto; border-top-color: var(--primary);"></div>';
+                    try {
+                        const res = await fetch(`/analysis/${currentHandle}`);
+                        if (!res.ok) throw new Error('Failed to fetch analysis');
+                        currentAnalysis = await res.json();
+                        renderAnalysis(currentAnalysis);
+                    } catch (err) {
+                        analysisContainer.innerHTML = `<p class="error-msg">${err.message}</p>`;
+                    }
+                } else {
+                    renderAnalysis(currentAnalysis);
+                }
             } else {
-                const filtered = currentProblems.filter(p => p.difficulty_category === filter);
-                renderCards(filtered, currentHandle);
+                analysisContainer.classList.add('hidden');
+                cardsContainer.classList.remove('hidden');
+                
+                if (filter === 'All') {
+                    renderCards(currentProblems, currentHandle);
+                } else {
+                    const filtered = currentProblems.filter(p => p.difficulty_category === filter);
+                    renderCards(filtered, currentHandle);
+                }
             }
         });
     });
+
+    function renderAnalysis(data) {
+        let strongHtml = data.strong_topics.map(t => `
+            <div class="topic-row">
+                <span class="topic-name">${t.tag}</span>
+                <div class="topic-stats">
+                    ${t.solved}/${t.attempts} <span class="win-rate high">${(t.win_rate * 100).toFixed(0)}%</span>
+                </div>
+            </div>
+        `).join('') || '<p style="color: var(--text-muted)">Not enough data</p>';
+        
+        let weakHtml = data.weak_topics.map(t => `
+            <div class="topic-row">
+                <span class="topic-name">${t.tag}</span>
+                <div class="topic-stats">
+                    ${t.solved}/${t.attempts} <span class="win-rate low">${(t.win_rate * 100).toFixed(0)}%</span>
+                </div>
+            </div>
+        `).join('') || '<p style="color: var(--text-muted)">Not enough data</p>';
+
+        let avoidedHtml = (data.avoided_topics || []).map(t => `
+            <div class="topic-row">
+                <span class="topic-name" style="color: var(--text-muted)">${t}</span>
+                <div class="topic-stats">
+                    <span class="win-rate" style="color: var(--text-muted)">0 attempts</span>
+                </div>
+            </div>
+        `).join('') || '<p style="color: var(--text-muted)">None</p>';
+
+        const ratings = Object.keys(data.rating_stats).map(Number).sort((a,b)=>a-b);
+        const maxCount = Math.max(...Object.values(data.rating_stats), 1);
+        
+        let chartHtml = ratings.map(r => {
+            const count = data.rating_stats[r];
+            const height = (count / maxCount) * 100;
+            return `
+                <div class="bar-col" title="${count} solved">
+                    <div class="bar-fill" style="height: ${height}%"></div>
+                    <span class="bar-label">${r}</span>
+                </div>
+            `;
+        }).join('');
+
+        analysisContainer.innerHTML = `
+            <div class="analysis-header-card">
+                <h3>Current Rating</h3>
+                <div class="analysis-rating" style="color: ${getRatingColor(data.current_rating)}">${data.current_rating}</div>
+                <div class="analysis-range">🎯 Sweet Spot: <strong>${data.rating_range[0]} - ${data.rating_range[1]}</strong></div>
+            </div>
+            
+            <div class="analysis-grid">
+                <div class="analysis-card">
+                    <h4>💪 Strongest Topics</h4>
+                    ${strongHtml}
+                </div>
+                
+                <div class="analysis-card">
+                    <h4>⚠️ Weakest Topics</h4>
+                    ${weakHtml}
+                </div>
+                
+                <div class="analysis-card">
+                    <h4>🙈 Avoided Topics</h4>
+                    ${avoidedHtml}
+                </div>
+            </div>
+            
+            <div class="analysis-card">
+                <h4>📊 Rating Distribution</h4>
+                <div class="bar-chart">
+                    ${chartHtml}
+                </div>
+            </div>
+        `;
+    }
 });

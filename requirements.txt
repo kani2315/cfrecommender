@@ -13,3 +13,4 @@ python-dotenv==1.0.1
 numpy
 pandas
 requests
+xgboost==2.0.3
