@@ -1,0 +1,19 @@
+# Step 6 — PostgreSQL for local development
+# Usage: docker compose -f docker-compose.db.yml up -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: recommender_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: recommender
+      POSTGRES_PASSWORD: recommender123
+      POSTGRES_DB: recommender_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

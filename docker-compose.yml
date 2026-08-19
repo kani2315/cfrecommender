@@ -1,0 +1,56 @@
+# Full stack: FastAPI app + PostgreSQL + Background Scheduler
+# Usage: docker compose up --build -d
+
+services:
+  # ── PostgreSQL Database ──────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: recommender_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: recommender
+      POSTGRES_PASSWORD: recommender123
+      POSTGRES_DB: recommender_db
+    ports:
+      - "5433:5432"    # host:5433 → container:5432 (avoids conflict)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recommender -d recommender_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── FastAPI Application ──────────────────────────────────────
+  app:
+    build: .
+    container_name: recommender_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://recommender:recommender123@db:5432/recommender_db
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./models:/app/models    # persist trained model artifacts
+      - ./frontend:/app/frontend # hot-reload frontend UI changes
+
+  # ── Data Fetcher Scheduler ───────────────────────────────────
+  scheduler:
+    build: .
+    container_name: recommender_scheduler
+    restart: unless-stopped
+    # Run the fetch script immediately, then wait 24 hours, loop.
+    command: sh -c "while true; do python scripts/fetch_cf_data.py && python scripts/train.py; sleep 86400; done"
+    environment:
+      DATABASE_URL: postgresql://recommender:recommender123@db:5432/recommender_db
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./models:/app/models    # share models with app
+
+volumes:
+  pgdata:

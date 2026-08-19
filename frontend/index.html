@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codeforces ML Recommender</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css?v=8">
+    
+    <style>
+        .theme-toggle {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            min-width: unset;
+            padding: 0;
+        }
+        .theme-toggle:hover {
+            background: var(--bg-card-hover);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background-elements">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+        🌙
+    </button>
+
+    <main class="container">
+        <header>
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#00d2ff" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    <path d="M2 17L12 22L22 17" stroke="#3a7bd5" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    <path d="M2 12L12 17L22 12" stroke="#3a7bd5" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+                <h1>CF Recommender</h1>
+            </div>
+            <p class="subtitle">Promlems In Your Sweet Spot By Kanishka</p>
+        </header>
+
+        <section class="search-section">
+            <div class="search-box">
+                <input type="text" id="handleInput" placeholder="Enter Codeforces Handle (e.g. tourist)"
+                    autocomplete="off">
+                <button id="recommendBtn">
+                    <span class="btn-text">Find Problems</span>
+                    <div class="spinner hidden"></div>
+                </button>
+            </div>
+            <p id="errorMsg" class="error-msg hidden"></p>
+        </section>
+
+        <section class="results-section">
+            <div class="results-header hidden" id="resultsHeader">
+                <h2>Top Recommendations for <span id="targetHandle" class="highlight"></span></h2>
+                <div class="badge-group">
+                    <span class="badge">Let's Begin</span>
+                    <span class="badge">Stratified Difficulties</span>
+                </div>
+                <div class="filter-group" id="filterGroup">
+                    <button class="filter-btn active" data-filter="All">All</button>
+                    <button class="filter-btn" data-filter="Easy">Warm Up (Easy)</button>
+                    <button class="filter-btn" data-filter="Medium">Medium</button>
+                    <button class="filter-btn" data-filter="Hard">Challenge (Hard)</button>
+                </div>
+            </div>
+            <div id="cardsContainer" class="cards-grid">
+                <!-- Cards will be injected here via JS -->
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
