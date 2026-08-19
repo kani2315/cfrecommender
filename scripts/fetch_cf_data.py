@@ -5,7 +5,7 @@ and store them in the local database.
 This will replace the synthetic data generation script.
 """
 
-import sys, pathlib, time, requests
+import sys, pathlib, time, requests, random
 from typing import List, Dict
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
@@ -18,7 +18,12 @@ NUM_USERS = 50
 def fetch_problems(db):
     print("Fetching Codeforces problemset...")
     url = "https://codeforces.com/api/problemset.problems"
-    response = requests.get(url)
+    try:
+        response = requests.get(url, timeout=15)
+    except requests.exceptions.RequestException as e:
+        print(f"Error connecting to Codeforces API: {e}")
+        return
+        
     data = response.json()
     
     if data["status"] != "OK":
@@ -61,7 +66,12 @@ def fetch_problems(db):
 def fetch_users_and_submissions(db):
     print("Fetching active Codeforces users...")
     url = "https://codeforces.com/api/user.ratedList?activeOnly=true"
-    response = requests.get(url)
+    try:
+        response = requests.get(url, timeout=15)
+    except requests.exceptions.RequestException as e:
+        print(f"Error connecting to Codeforces API: {e}")
+        return
+        
     data = response.json()
     
     if data["status"] != "OK":
@@ -69,9 +79,40 @@ def fetch_users_and_submissions(db):
         return
         
     users_data = data["result"]
-    # Take a sample of users from different rating ranges for variety
-    # Here we just take the first NUM_USERS for simplicity
-    selected_users = users_data[:NUM_USERS]
+    
+    # ── Stratified Sampling ─────────────────────────────────────
+    buckets = {
+        "beginner": [],   # < 1200
+        "pupil": [],      # 1200 - 1399
+        "specialist": [], # 1400 - 1599
+        "expert": [],     # 1600 - 1899
+        "advanced": []    # >= 1900
+    }
+    
+    for u in users_data:
+        r = u.get("rating", 0)
+        if r < 1200:
+            buckets["beginner"].append(u)
+        elif r < 1400:
+            buckets["pupil"].append(u)
+        elif r < 1600:
+            buckets["specialist"].append(u)
+        elif r < 1900:
+            buckets["expert"].append(u)
+        else:
+            buckets["advanced"].append(u)
+            
+    users_per_bucket = NUM_USERS // 5
+    selected_users = []
+    
+    for bucket_name, bucket_users in buckets.items():
+        if len(bucket_users) >= users_per_bucket:
+            sampled = random.sample(bucket_users, users_per_bucket)
+        else:
+            sampled = bucket_users # Fallback if somehow not enough
+        selected_users.extend(sampled)
+        
+    print(f"Sampled {len(selected_users)} users across {len(buckets)} skill tiers.")
     
     # Submissions and Users are now deleted in main() beforehand
     
@@ -95,7 +136,7 @@ def fetch_users_and_submissions(db):
         # We only care about normal problem submissions (not gym)
         sub_url = f"https://codeforces.com/api/user.status?handle={handle}&from=1&count=1000"
         try:
-            sub_res = requests.get(sub_url)
+            sub_res = requests.get(sub_url, timeout=15)
             sub_data = sub_res.json()
             if sub_data["status"] == "OK":
                 for sub in sub_data["result"]:
