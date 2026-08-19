@@ -139,10 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="tags">
                     ${tagsHtml}
                 </div>
-                <div class="card-footer">
-                    <span class="prob-label">ML Solve Probability</span>
-                    <span class="prob-value">${percent}</span>
-                </div>
             `;
 
             cardsContainer.appendChild(card);
