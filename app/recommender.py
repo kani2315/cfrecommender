@@ -234,22 +234,39 @@ def analyze_user(db: Session, handle: str) -> dict:
     for tag, stats in tag_stats.items():
         if stats["attempts"] > 0:
             win_rate = stats["solved"] / stats["attempts"]
+            strength_score = stats["solved"] * win_rate
             topic_list.append({
                 "tag": tag,
                 "attempts": stats["attempts"],
                 "solved": stats["solved"],
-                "win_rate": round(win_rate, 2)
+                "win_rate": round(win_rate, 2),
+                "strength_score": strength_score
             })
             
-    topic_list.sort(key=lambda x: (x["win_rate"], x["solved"]), reverse=True)
+    # filter for statistical relevance (at least 5 attempts)
     reliable_topics = [t for t in topic_list if t["attempts"] >= 5]
     if not reliable_topics:
         reliable_topics = topic_list
         
-    strong_topics = reliable_topics[:5]
-    weak_topics = reliable_topics[-5:] if len(reliable_topics) > 5 else []
-    weak_topics.reverse()
+    # Strong Topics: highest strength score (balances volume of solves with efficiency)
+    strong_candidates = sorted(reliable_topics, key=lambda x: x["strength_score"], reverse=True)
+    strong_topics = strong_candidates[:5]
     
+    # Weak Topics: lowest win rate (break ties by highest attempts to find proven weaknesses)
+    weak_candidates = sorted(reliable_topics, key=lambda x: (x["win_rate"], -x["attempts"]))
+    
+    weak_topics = []
+    strong_tags = {t["tag"] for t in strong_topics}
+    for t in weak_candidates:
+        if t["tag"] not in strong_tags:
+            weak_topics.append(t)
+        if len(weak_topics) == 5:
+            break
+    
+    # Clean up the internal `strength_score` before returning
+    for t in strong_topics + weak_topics:
+        t.pop("strength_score", None)
+        
     avoided_tags = _get_avoided_tags(db, user_rating, tag_stats)[:5]
     
     return {
