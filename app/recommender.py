@@ -71,12 +71,12 @@ def _get_avoided_tags(db: Session, user_rating: int, tag_stats: dict) -> list[st
         user_attempts = tag_stats.get(tag, {}).get("attempts", 0)
         # Avoidance ratio: how common is this globally vs how often the user attempts it
         avoidance_score = db_count / (user_attempts + 1)
-        avoided.append((tag, avoidance_score))
+        avoided.append((tag, avoidance_score, user_attempts))
         
     # sort by avoidance score descending so the most avoided popular topics come first
     avoided.sort(key=lambda x: x[1], reverse=True)
     
-    return [x[0] for x in avoided]
+    return [{"tag": x[0], "attempts": x[2]} for x in avoided]
 
 
 def recommend(db: Session, handle: str, n: int = DEFAULT_N) -> list[dict]:
