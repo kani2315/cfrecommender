@@ -26,7 +26,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 import pandas as pd
 import joblib
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
+from xgboost import XGBClassifier
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
@@ -56,6 +56,8 @@ def load_data_from_db():
                 User.rating.label("user_rating"),
                 Problem.rating.label("problem_rating"),
                 Problem.tags,
+                Problem.solve_count.label("problem_solve_count"),
+                Submission.user_handle,
                 Submission.solved
             )
             .join(Submission, User.handle == Submission.user_handle)
@@ -85,10 +87,14 @@ def train():
     print(f"📂  Loaded {len(df)} submission records for training.")
     
     # ── 2. Prepare feature matrix ─────────────────────────────
+    # Engineer user_total_solved by counting their submissions in the dataset
+    user_counts = df.groupby('user_handle').size().reset_index(name='user_total_solved')
+    df = df.merge(user_counts, on='user_handle')
+    
     # We drop NaN values just in case
     df = df.dropna(subset=["user_rating", "problem_rating", "solved"])
     
-    X = df[["user_rating", "problem_rating", "tags"]]
+    X = df[["user_rating", "problem_rating", "problem_solve_count", "user_total_solved", "tags"]]
     y = df["solved"].astype(int)
 
     # ── 3. Train / test split ─────────────────────────────────
@@ -100,14 +106,14 @@ def train():
     # ── 4. Build pipeline ─────────────────────────────────────
     preprocessor = ColumnTransformer(
         transformers=[
-            ("num", "passthrough", ["user_rating", "problem_rating"]),
+            ("num", "passthrough", ["user_rating", "problem_rating", "problem_solve_count", "user_total_solved"]),
             ("cat", CountVectorizer(tokenizer=split_tags, token_pattern=None), "tags"),
         ]
     )
 
     pipeline = Pipeline([
         ("pre",   preprocessor),
-        ("model", LogisticRegression(max_iter=1000, random_state=42, class_weight='balanced')),
+        ("model", XGBClassifier(n_estimators=100, max_depth=6, learning_rate=0.1, random_state=42, use_label_encoder=False, eval_metric='logloss')),
     ])
 
     # ── 5. Fit ────────────────────────────────────────────────

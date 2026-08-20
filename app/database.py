@@ -66,6 +66,7 @@ class Problem(Base):
     name   = Column(String(200), nullable=False)
     rating = Column(Integer, nullable=True)     # problem difficulty rating (can be missing)
     tags   = Column(String(500), nullable=True) # comma-separated list of tags
+    solve_count = Column(Integer, default=0)    # global problem popularity
 
     submissions = relationship("Submission", back_populates="problem")
 
