@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.database import create_tables, get_db, User
 from app.schemas import ProblemOut, UserOut
-from app.recommender import recommend
+from app.recommender import recommend, analyze_user
 from app.monitoring import prometheus_middleware, metrics_endpoint, RECOMMENDATION_COUNT
 
 # ── initialise ────────────────────────────────────────────────
@@ -48,8 +48,11 @@ async def background_scheduler():
     while True:
         try:
             print("🚀 Starting background ML training task...")
-            subprocess.run(["python", "scripts/fetch_cf_data.py"], check=True)
-            subprocess.run(["python", "scripts/train.py"], check=True)
+            proc1 = await asyncio.create_subprocess_exec("python", "scripts/fetch_cf_data.py")
+            await proc1.wait()
+            
+            proc2 = await asyncio.create_subprocess_exec("python", "scripts/train.py")
+            await proc2.wait()
             print("✅ Background training complete. Sleeping for 24 hours.")
         except Exception as e:
             print(f"❌ Error in background scheduler: {e}")
@@ -100,6 +103,16 @@ def get_recommendations(
     RECOMMENDATION_COUNT.inc(len(recs))
     return recs
 
+@app.get("/analysis/{handle}", tags=["Analysis"])
+def get_user_analysis(
+    handle: str,
+    db: Session = Depends(get_db),
+):
+    """Return profile analysis for a Codeforces user."""
+    try:
+        return analyze_user(db, handle=handle)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/users", tags=["Users"], response_model=list[UserOut])
 def list_users(db: Session = Depends(get_db)):
