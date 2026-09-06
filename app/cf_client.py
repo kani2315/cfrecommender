@@ -7,17 +7,17 @@ from typing import List, Dict, Set
 CF_API_BASE = "https://codeforces.com/api"
 
 
-def get_user_info(handle: str) -> dict:
-    # fetches basic profile data from codeforces
+def get_user_info(handle:str)->dict:
+    # profile of userr
     url = f"{CF_API_BASE}/user.info?handles={handle}"
     try:
-        res = requests.get(url, timeout=10)
-        data = res.json()
+        res=requests.get(url, timeout=10)
+        data=res.json()
         if data.get("status") == "OK" and data.get("result"):
-            user_data = data["result"][0]
+            user_data = data["result"][0] #ignore the status and brackets of dict
             return {
                 "handle": user_data.get("handle"),
-                "rating": user_data.get("rating", 0)  # Unrated users get 0
+                "rating": user_data.get("rating", 0)  #give 0 for unrated
             }
         else:
             print(f"Error fetching CF user info: {data.get('comment')}")
@@ -28,24 +28,21 @@ def get_user_info(handle: str) -> dict:
 
 
 def get_user_submissions(handle: str) -> List[Dict]:
-    # grabs all submissions for the given user
+    # submissions of userrr
     url = f"{CF_API_BASE}/user.status?handle={handle}"
     try:
-        res = requests.get(url, timeout=15)
-        data = res.json()
-        
+        res=requests.get(url, timeout=15)
+        data=res.json()
         if data.get("status") != "OK":
             print(f"Error fetching CF submissions: {data.get('comment')}")
             return []
-            
         submissions = data.get("result", [])
-        
-        parsed_submissions = []
+        parsed_submissions=[]
         for sub in submissions:
-            # We only care about standard problems with contestId
+            # ignore prob with no contest id
             if "problem" in sub and "contestId" in sub["problem"]:
                 p = sub["problem"]
-                pid = f"{p['contestId']}{p['index']}"
+                pid =f"{p['contestId']}{p['index']}"
                 
                 parsed_submissions.append({
                     "problem_id": pid,
@@ -61,8 +58,8 @@ def get_user_submissions(handle: str) -> List[Dict]:
         return []
 
 
-def get_solved_problem_ids(handle: str) -> Set[str]:
-    # extracts just the problem ids that were successfully solved
+def get_solved_problem_ids(handle:str)->Set[str]:
+    # to get the submitted prob
     """Return a set of problem IDs that the user has already solved."""
     subs = get_user_submissions(handle)
     solved = {s["problem_id"] for s in subs if s["solved"]}
