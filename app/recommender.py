@@ -119,12 +119,27 @@ def recommend(db: Session, handle: str, n: int = DEFAULT_N) -> list[dict]:
 
     def score_candidates(cands, target_prob):
         if not cands: return []
+        
+        # Calculate user's winrate per tag for real-time inference
+        user_tag_winrates = {}
+        for t, stats in tag_stats.items():
+            if stats["attempts"] > 0:
+                user_tag_winrates[t] = stats["solved"] / stats["attempts"]
+                
+        def get_avg_winrate(p_tags):
+            if not p_tags: return 0.50
+            tags = [t.strip() for t in p_tags.split(",") if t.strip() and t.strip() != "*special"]
+            if not tags: return 0.50
+            rates = [user_tag_winrates.get(t, 0.50) for t in tags]
+            return sum(rates) / len(rates)
+            
         records = [
             {
                 "user_rating":         user_rating,
                 "problem_rating":      p.rating,
                 "problem_solve_count": p.solve_count,
                 "user_total_solved":   user_total_solved,
+                "user_topic_winrate":  get_avg_winrate(p.tags),
                 "tags":                p.tags,
             }
             for p in cands

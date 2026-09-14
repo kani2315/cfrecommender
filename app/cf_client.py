@@ -4,7 +4,7 @@ import requests
 from typing import List, Dict, Set
 
 # Base Codeforces API URL
-CF_API_BASE = "https://codeforces.com/api"
+CF_API_BASE="https://codeforces.com/api"
 
 
 def get_user_info(handle:str)->dict:
@@ -20,7 +20,7 @@ def get_user_info(handle:str)->dict:
                 "rating": user_data.get("rating", 0)  #give 0 for unrated
             }
         else:
-            print(f"Error fetching CF user info: {data.get('comment')}")
+            print(f"Error fetching CF user info:{data.get('comment')}")
             return None
     except Exception as e:
         print(f"Exception fetching CF user info: {e}")
@@ -34,7 +34,7 @@ def get_user_submissions(handle: str) -> List[Dict]:
         res=requests.get(url, timeout=15)
         data=res.json()
         if data.get("status") != "OK":
-            print(f"Error fetching CF submissions: {data.get('comment')}")
+            print(f"Error fetching CF submissions:{data.get('comment')}")
             return []
         submissions = data.get("result", [])
         parsed_submissions=[]
