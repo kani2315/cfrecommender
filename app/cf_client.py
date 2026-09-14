@@ -4,23 +4,24 @@ import requests
 from typing import List, Dict, Set
 
 # Base Codeforces API URL
-CF_API_BASE = "https://codeforces.com/api"
+CF_API_BASE="https://codeforces.com/api"
 
 
-def get_user_info(handle: str) -> dict:
+
+def get_user_info(handle: str)->dict:
     # fetches basic profile data from codeforces
-    url = f"{CF_API_BASE}/user.info?handles={handle}"
+    url=f"{CF_API_BASE}/user.info?handles={handle}"
     try:
-        res = requests.get(url, timeout=10)
+        res=requests.get(url, timeout=10)
         data = res.json()
         if data.get("status") == "OK" and data.get("result"):
-            user_data = data["result"][0]
+            user_data=data["result"][0]
             return {
-                "handle": user_data.get("handle"),
-                "rating": user_data.get("rating", 0)  # Unrated users get 0
+                "handle":user_data.get("handle"),
+                "rating": user_data.get("rating",0)  # Unrated users get 0
             }
         else:
-            print(f"Error fetching CF user info: {data.get('comment')}")
+            print(f"Error fetching CF user info:{data.get('comment')}")
             return None
     except Exception as e:
         print(f"Exception fetching CF user info: {e}")
@@ -31,11 +32,11 @@ def get_user_submissions(handle: str) -> List[Dict]:
     # grabs all submissions for the given user
     url = f"{CF_API_BASE}/user.status?handle={handle}"
     try:
-        res = requests.get(url, timeout=15)
+        res=requests.get(url, timeout=15)
         data = res.json()
         
         if data.get("status") != "OK":
-            print(f"Error fetching CF submissions: {data.get('comment')}")
+            print(f"Error fetching CF submissions:{data.get('comment')}")
             return []
             
         submissions = data.get("result", [])

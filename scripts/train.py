@@ -94,7 +94,48 @@ def train():
     # We drop NaN values just in case
     df = df.dropna(subset=["user_rating", "problem_rating", "solved"])
     
-    X = df[["user_rating", "problem_rating", "problem_solve_count", "user_total_solved", "tags"]]
+    # NEW: Engineer user_topic_winrate
+    print("Engineeering user_topic_winrate feature...")
+    # Explode tags to calculate historical per-tag win rates for each user
+    df_tags = df[["user_handle", "tags", "solved"]].copy()
+    df_tags["tag_list"] = df_tags["tags"].apply(lambda x: [t.strip() for t in x.split(",") if t.strip() and t.strip() != "*special"])
+    df_exploded = df_tags.explode("tag_list")
+    
+    # Calculate global average winrate for fallback
+    global_winrate = df["solved"].mean()
+    
+    # Calculate user's winrate per tag
+    tag_stats = df_exploded.groupby(["user_handle", "tag_list"]).agg(
+        attempts=("solved", "count"),
+        solves=("solved", "sum")
+    ).reset_index()
+    tag_stats["win_rate"] = tag_stats["solves"] / tag_stats["attempts"]
+    
+    # Build fast lookup dictionary
+    user_tag_winrates = {}
+    for _, row in tag_stats.iterrows():
+        u = row["user_handle"]
+        t = row["tag_list"]
+        w = row["win_rate"]
+        if u not in user_tag_winrates:
+            user_tag_winrates[u] = {}
+        user_tag_winrates[u][t] = w
+        
+    def get_avg_winrate(row):
+        u = row["user_handle"]
+        tags = [t.strip() for t in row["tags"].split(",") if t.strip() and t.strip() != "*special"]
+        if not tags:
+            return global_winrate
+        
+        rates = []
+        for t in tags:
+            # If user has never attempted this tag, assume average global winrate
+            rates.append(user_tag_winrates.get(u, {}).get(t, global_winrate))
+        return sum(rates) / len(rates)
+        
+    df["user_topic_winrate"] = df.apply(get_avg_winrate, axis=1)
+    
+    X = df[["user_rating", "problem_rating", "problem_solve_count", "user_total_solved", "user_topic_winrate", "tags"]]
     y = df["solved"].astype(int)
 
     # ── 3. Train / test split ─────────────────────────────────
@@ -106,7 +147,7 @@ def train():
     # ── 4. Build pipeline ─────────────────────────────────────
     preprocessor = ColumnTransformer(
         transformers=[
-            ("num", "passthrough", ["user_rating", "problem_rating", "problem_solve_count", "user_total_solved"]),
+            ("num", "passthrough", ["user_rating", "problem_rating", "problem_solve_count", "user_total_solved", "user_topic_winrate"]),
             ("cat", CountVectorizer(tokenizer=split_tags, token_pattern=None), "tags"),
         ]
     )
