@@ -1,0 +1,28 @@
+# Render Infrastructure-as-Code Blueprint
+# Docs: https://render.com/docs/blueprint-spec
+#
+# This file lets Render auto-provision the full stack:
+#   1. A Web Service (FastAPI app via Docker)
+#   2. A free PostgreSQL database
+#
+# Deploy with one click: https://render.com/deploy
+
+databases:
+  - name: recommender-db
+    plan: free                # free PostgreSQL (90-day TTL, renewable)
+    databaseName: recommender_db
+    user: recommender
+
+services:
+  - type: web
+    name: cf-recommender
+    runtime: docker           # uses your existing Dockerfile
+    plan: free                # free tier: 750 hrs/month
+    autoDeploy: true          # auto-deploy on every git push
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: recommender-db
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: "3.10"

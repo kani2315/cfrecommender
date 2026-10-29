@@ -1,7 +1,20 @@
 .venv/
+venv/
 __pycache__/
 *.pyc
 .env
 *.db
+*.sqlite3
 .git/
 .gitignore
+.DS_Store
+scratch/
+scratch.py
+scratch2.py
+tests/
+debug.txt
+*.zip
+*.pdf
+docker-compose*.yml
+render.yaml
+# NOTE: Do NOT ignore models/ — the pre-trained .joblib files must be in the image

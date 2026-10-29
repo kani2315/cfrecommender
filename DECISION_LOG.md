@@ -313,3 +313,33 @@ Instead of using Kubernetes CronJobs for daily ML training, we utilize:
 - **Production (Railway):** FastAPI`s `asyncio.create_task()` to trigger a background loop that invisibly handles data fetching and model training asynchronously alongside the web server.
 
 This approach delivers the core benefits of containerization and CI/CD without the massive complexity of Kubernetes.
+
+## 28. Integration of cftests (Codeforces Testing Suite)
+**Date:** 2026-09-18
+**Context:** Integrated a comprehensive testing suite (`cftests.zip`) into the project to ensure the reliability of the Machine Learning pipeline, Database Queries, API Endpoints, and core Recommendation logic.
+
+**Uses of Each Test Case / Test Layer:**
+
+1. **Layer 1: Pure Functions (`test_unit_pure.py`)**
+   - **`TestSplitTags`**: Tests the `split_tags` tokenizer function to ensure tags are correctly split, stripped of whitespace, and empty strings/None values are handled properly. This prevents corrupted vocabulary.
+   - **`TestGetWeakTags`**: Tests the `_get_weak_tags` function. Ensures that it picks the lowest win-rate tags when there are enough reliable attempts, ignores statistically insignificant tags (too few attempts), and excludes special tags. It also guards against a known bug where the only reliable weak tag is dropped.
+
+2. **Layer 2: Database Integration (`test_db_queries.py`)**
+   - **`TestCandidateQuery`**: Validates the SQL queries that fetch candidate problems. Tests that the query respects the 300-point rating band (both upper and lower bounds clamped at 0), excludes unrated problems, properly filters out already-solved problems, and checks for exact tag matching.
+   - **`TestAvoidedTags`**: Validates the `_get_avoided_tags` logic, ensuring that completely unattempted tags are ranked correctly based on global avoidance ratios, rather than pure avoidance.
+
+3. **Layer 3: Service Layer (`test_recommend_service.py`)**
+   - **`TestRecommendContract`**: Ensures the service logic operates correctly when internal dependencies (like DB and ML model) are mocked. Validates that solved problems are never recommended, results are within the rating band, no duplicates exist, required schema fields are present, and probability bounds are valid.
+   - **`TestColdStart`**: Tests handling of new users. Validates that unrated users with some history get an estimated rating, while brand-new users fall back to a 1000 rating.
+   - **`TestRankingLogic`**: Validates that problems categorized under "Comfort Zone" are prioritized closer to a 75% solve probability.
+   - **`TestKnownDefects`**: Includes tests for known edge cases such as the `n` parameter limiting result counts and verifying that the scoring loop limits iterations to avoid exhaustive database polling.
+
+4. **Layer 4: API Contract (`test_api_contract.py`)**
+   - **`TestRecommendEndpoint`**: Uses `TestClient` to mock the FastAPI application. Tests for HTTP 200 responses, strict validation against the `ProblemOut` response schema, correct bounds validation for the `n` parameter, and verifies the presence of the `X-Process-Time` performance header.
+   - **`TestMetricsEndpoint`**: Verifies that the `/metrics` endpoint is exposed and returning expected statistics (e.g., `http_requests_total`).
+   - **`TestErrorHandling`**: Tests error scenarios, notably ensuring that an unknown user handle returns an HTTP 404 response instead of crashing with a 500 error.
+
+5. **Layer 5: Machine Learning Contracts (`test_ml_contract.py`)**
+   - **`TestFeatureSchemaContract`**: Validates that the serving pipeline sends the exact same feature columns to the XGBoost model as the training pipeline was fitted on, preventing silent data drift and NaN values.
+   - **`TestTrainServeParity`**: A critical guard rail that catches discrepancy bugs between the training data generation (`train.py`) and the real-time serving inference (`recommender.py`), such as `user_total_solved` vs total attempts, and unseen tag fallback values.
+   - **`TestModelArtifact`**: Validates the serialization boundary. It ensures `split_tags` is importable from a stable module namespace (fixing previous Uvicorn crashing issues) and that the `.joblib` saved model can be loaded and successfully predict outcomes in a CI environment.
